@@ -1,0 +1,13 @@
+inbound-transport:
+  - [http, 0.0.0.0, 8300]
+outbound-transport: http
+webhook-url: http://localhost:8320/hook/
+endpoint: http://localhost:8300
+admin-insecure-mode: true
+admin: [0.0.0.0, 8321]
+auto-provision: true
+wallet-type: indy
+label: franklin
+wallet-name: franklin-wallet
+wallet-key: franklinkey
+genesis-url: ledgerUrl/genesis

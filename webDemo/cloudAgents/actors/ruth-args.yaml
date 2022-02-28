@@ -1,0 +1,13 @@
+inbound-transport:
+  - [http, 0.0.0.0, 8400]
+outbound-transport: http
+webhook-url: http://localhost:8420/hook/
+endpoint: http://localhost:8400
+admin-insecure-mode: true
+admin: [0.0.0.0, 8421]
+auto-provision: true
+wallet-type: indy
+label: ruth
+wallet-name: ruth-wallet
+wallet-key: ruthkey
+genesis-url: ledgerUrl/genesis

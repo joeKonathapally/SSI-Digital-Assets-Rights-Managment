@@ -1,0 +1,53 @@
+.invitation-parent-container{
+  height: 50vh;
+  width: 100vw;
+}
+.invitation-generator-container{
+  background-color: lightgray;
+  display: flex;
+  flex-direction: column;
+  border-radius: 50px;
+  margin-left: 50px;
+  margin-right: 50px;
+  margin-bottom: 50px;
+  padding: 50px;
+  padding-top: 15px;
+}
+
+.invitation-generator-header{
+  flex-basis: auto;
+}
+
+.invitation-generator-body{
+  display: flex;
+  flex-direction: row;
+}
+
+.invitation-receiver-container{
+  background-color: lightgray;
+  display: flex;
+  flex-direction: column;
+  border-radius: 50px;
+  margin-left: 50px;
+  margin-right: 50px;
+  margin-bottom: 50px;
+  padding: 50px;
+  padding-top: 15px;
+}
+
+.invitation-receiver-header{
+  flex-basis: auto;
+}
+
+.invitation-receiver-body{
+  display: flex;
+  flex-direction: row;
+}
+
+.invitation-generator{
+  flex: 1;
+}
+
+.invitation-receiver{
+  flex: 1;
+}

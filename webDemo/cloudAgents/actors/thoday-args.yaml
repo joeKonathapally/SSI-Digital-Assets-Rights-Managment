@@ -1,0 +1,13 @@
+inbound-transport:
+  - [http, 0.0.0.0, 8100]
+outbound-transport: http
+webhook-url: http://localhost:8120/hook/
+endpoint: http://localhost:8100
+admin-insecure-mode: true
+admin: [0.0.0.0, 8121]
+auto-provision: true
+wallet-type: indy
+label: thoday
+wallet-name: thoday-wallet
+wallet-key: thodaykey
+genesis-url: ledgerUrl/genesis

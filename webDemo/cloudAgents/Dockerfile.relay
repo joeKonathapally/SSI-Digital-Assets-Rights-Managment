@@ -1,0 +1,7 @@
+FROM node:latest
+
+ADD ./webhookrelay .
+
+RUN ls ./
+
+ENTRYPOINT ["/bin/bash", "-c", "node something.js"]

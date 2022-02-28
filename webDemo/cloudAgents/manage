@@ -1,0 +1,199 @@
+#!/bin/bash
+
+# configures the working directory
+cd "$(dirname "$0")" || exit 1
+
+# sets the docker runtime to be used
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+
+fileNames=(`ls ./actors/*.yaml`)
+actors=()
+
+OLDIFS=$IFS
+IFS='-'
+for file in "${fileNames[@]}"; do
+  temp="$(basename "${file}")"
+  read -r -a val <<< "${temp}"
+  actors+=(${val[0]})
+done
+IFS=$OLDIFS
+
+# TODO: add comment support in the yaml files
+
+if [ -n "$1" ]; then
+  if [ ! "$1" = "build" ] && [ ! "$1" = "all" ] && [[ ! "${actors[@]}" =~ "$1" ]]; then
+    echo "Please enter build, endorser, issuer or holder as a flag"
+  else
+    if [ "$1" = "build" ]; then
+      echo "Building image..."
+      declare -i position=0
+      arguments=("$@")
+      for arg in "$@"; do
+        position=$((position + 1))
+        if [ "$arg" = "--ip-address" ]; then
+          ipAddress="${arguments[${position}]}"
+        fi
+        if [ "$arg" = "--ledger-url" ]; then
+          ledgerUrl="${arguments[${position}]}"
+        fi
+      done
+      incompleteFlag=false
+      if [ -n "${ipAddress}" ]; then
+        echo "Local IP address: $ipAddress"
+      else
+        echo "Please supply a local IP address through the --ip-address flag"
+        incompleteFlag=true
+      fi
+      if [ -n "${ledgerUrl}" ]; then
+        echo "Ledger URL: $ledgerUrl"
+      else
+        ledgerUrl="http://${ipAddress}:9000"
+        echo "Ledger URL: $ledgerUrl"
+      fi
+      if [ "$incompleteFlag" = true ]; then
+        exit 1
+      fi
+      mkdir ./temp-actors
+      for actor in "${actors[@]}"; do
+        echo "${actor}"
+        value=$(<./actors/${actor}-args.yaml)
+        value="${value//ledgerUrl/${ledgerUrl}}"
+        value="${value//localhost/${ipAddress}}"
+        echo "$value" > "./temp-actors/${actor}-args.yaml"
+      done     
+      $CONTAINER_RUNTIME build -t aries-cloudagent-run -f ./Dockerfile . --no-cache || exit 1 
+      $CONTAINER_RUNTIME build -t aries-cloudagent-relay -f ./Dockerfile.relay . --no-cache || exit 1 
+      rm -rf ./temp-actors
+    elif [ "$1" = "all" ]; then
+      if [ -n "$2" ]; then
+        if [ ! "$2" = "start" ] && [ ! "$2" = "stop" ] && [ ! "$2" = "down" ]; then
+          echo "Please enter start, stop or down as a flag"
+        else
+          if [ "$2" = "start" ]; then
+            for actor in "${actors[@]}"; do
+              echo "Running "$actor" cloud agent ..."
+              webhookUrl=''
+              IFS=$'\n'
+              commentsRemoved=($(grep -vw '#' ./actors/"$actor"-args.yaml))
+              IFS=$OLDIFS
+              expose=()
+              relayExpose=''
+              for element in "${commentsRemoved[@]}"; do
+                webhook=($(grep webhook-url <<< ${element}))
+                if [ ! ${#webhook[@]} = 0 ]; then
+                  pass=($(grep -E -o ':{1}[0-9]{1,5}' <<< ${webhook[1]}))
+                  relayExpose="$(echo "${pass[@]}" | sed 's/^.//')"
+                  webhookUrl="${webhook[1]}"
+                fi
+                temp=($(grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3},{1}[[:blank:]]?[0-9]{0,5}' <<< ${element}))
+                expose+=(${temp[@]})
+              done
+              ports=""
+              len=${#expose[@]}
+              for(( i=1; i<${len}; i=i+2)); do
+                temp="$(echo "${expose[i]}" | tr -d ' ')"
+                ports="${ports} -p $temp:$temp" 
+              done
+              relayPorts=" -p ${relayExpose}:${relayExpose}"
+              $CONTAINER_RUNTIME run -d --name "aries-cloudagent-$actor" \
+              ${ports} \
+              aries-cloudagent-run start --arg-file ./"$actor"-args.yaml
+              $CONTAINER_RUNTIME run -d --name "aries-cloudagent-$actor-relay" \
+              ${relayPorts} \
+              -e PORT="${relayExpose}" \
+              aries-cloudagent-relay
+            done
+          elif [ "$2" = "stop" ]; then
+            for actor in "${actors[@]}"; do
+              if [ "$($CONTAINER_RUNTIME ps -q -f name=aries-cloudagent-"${actor}")" = "" ]; then
+                echo ""$actor" cloud agent is not running"
+              else
+                echo "Stopping "$actor" cloud agent ..."
+                $CONTAINER_RUNTIME container stop "aries-cloudagent-${actor}"
+                $CONTAINER_RUNTIME container stop "aries-cloudagent-${actor}-relay"
+              fi
+            done
+          else
+            ./manage all stop
+            for actor in "${actors[@]}"; do
+              echo "Removing "$actor" cloud agent ..."
+              $CONTAINER_RUNTIME container rm "aries-cloudagent-${actor}"
+              $CONTAINER_RUNTIME container rm "aries-cloudagent-${actor}-relay"
+            done
+          fi
+        fi
+      else
+        echo "Please enter start, stop or down as a flag"
+      fi
+    else
+      if [ -n "$2" ]; then
+        if [ ! "$2" = "start" ] && [ ! "$2" = "stop" ] && [ ! "$2" = "down" ] && [ ! "$2" = "log" ] && [ ! "$2" = "relay-log" ]; then
+          echo "Please enter start, stop, down, log or relay-log as a flag"
+        else
+          if [ "$2" = "start" ]; then
+            echo "Running $1 cloud agent..."
+            webhookUrl=''
+            IFS=$'\n'
+            commentsRemoved=($(grep -vw '#' ./actors/"$1"-args.yaml))
+            IFS=$OLDIFS
+            expose=()
+            relayExpose=''
+            for element in "${commentsRemoved[@]}"; do
+              webhook=($(grep webhook-url <<< ${element}))
+              if [ ! ${#webhook[@]} = 0 ]; then
+                pass=($(grep -E -o ':{1}[0-9]{1,5}' <<< ${webhook[1]}))
+                relayExpose="$(echo "${pass[@]}" | sed 's/^.//')"
+                webhookUrl="${webhook[1]}"
+              fi
+              temp=($(grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3},{1}[[:blank:]]?[0-9]{0,5}' <<< ${element}))
+              expose+=(${temp[@]})
+            done
+            ports=""
+            len=${#expose[@]}
+            for(( i=1; i<${len}; i=i+2)); do
+              temp="$(echo "${expose[i]}" | tr -d ' ')"
+              ports="${ports} -p $temp:$temp" 
+            done
+            relayPorts=" -p ${relayExpose}:${relayExpose}"
+            $CONTAINER_RUNTIME run -d --name "aries-cloudagent-$1" \
+            ${ports} \
+            aries-cloudagent-run start --arg-file ./"$1"-args.yaml
+            $CONTAINER_RUNTIME run -d --name "aries-cloudagent-$1-relay" \
+            ${relayPorts} \
+            -e PORT="${relayExpose}" \
+            aries-cloudagent-relay
+          elif [ "$2" = "stop" ]; then
+            if [ "$($CONTAINER_RUNTIME ps -q -f name=aries-cloudagent-"$1")" = "" ]; then
+              echo ""$1" cloud agent is not running"
+            else
+              echo "Stopping "$1" cloud agent ..."
+              $CONTAINER_RUNTIME container stop "aries-cloudagent-$1"
+              $CONTAINER_RUNTIME container stop "aries-cloudagent-$1-relay"
+            fi
+          elif [ "$2" = "log" ]; then
+            if [ "$($CONTAINER_RUNTIME ps -q -f name=aries-cloudagent-"$1")" = "" ]; then
+              echo ""$1" cloud agent is not running"
+            else
+              $CONTAINER_RUNTIME logs -f "aries-cloudagent-$1"
+            fi
+          elif [ "$2" = "relay-log" ]; then
+            if [ "$($CONTAINER_RUNTIME ps -q -f name=aries-cloudagent-"$1")" = "" ]; then
+              echo ""$1" cloud agent is not running"
+            else
+              $CONTAINER_RUNTIME logs -f "aries-cloudagent-$1-relay"
+            fi
+          else
+            ./manage "$1" stop
+            echo "Removing "$1" cloud agent ..."
+            $CONTAINER_RUNTIME container rm "aries-cloudagent-$1"
+            $CONTAINER_RUNTIME container rm "aries-cloudagent-$1-relay"
+          fi
+        fi
+      else
+        echo "Please enter start, stop, down, log or relay-log as a flag"
+      fi
+    fi
+  fi
+else
+  echo "Please enter build, endorser, issuer or holder as a flag"
+fi

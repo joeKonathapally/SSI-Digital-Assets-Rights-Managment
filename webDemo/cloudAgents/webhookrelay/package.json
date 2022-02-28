@@ -1,0 +1,19 @@
+{
+  "name": "webhookrelay",
+  "version": "1.0.0",
+  "description": "",
+  "main": "something.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "express-ws": "^5.0.2",
+    "socket.io": "^4.1.3",
+    "socket.io-client": "^4.1.3",
+    "ws": "^8.2.0"
+  }
+}

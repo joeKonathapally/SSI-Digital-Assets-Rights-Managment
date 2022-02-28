@@ -1,0 +1,13 @@
+inbound-transport:
+  - [http, 0.0.0.0, 8200]
+outbound-transport: http
+webhook-url: http://localhost:8220/hook/
+endpoint: http://localhost:8200
+admin-insecure-mode: true
+admin: [0.0.0.0, 8221]
+auto-provision: true
+wallet-type: indy
+label: cavendish
+wallet-name: cavendish-wallet
+wallet-key: cavendishkey
+genesis-url: ledgerUrl/genesis

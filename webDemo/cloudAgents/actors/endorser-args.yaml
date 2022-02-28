@@ -1,0 +1,16 @@
+inbound-transport:
+  - [http, 0.0.0.0, 8000]
+outbound-transport: http
+# webhook-url: https://webhook.site/05b303a5-aeb6-42ce-88f6-9c2c7da9dfd4
+webhook-url: http://localhost:8020/hook/
+endpoint: http://localhost:8000
+admin-insecure-mode: true
+admin: [0.0.0.0, 8021]
+auto-provision: true
+public-invites:  true
+label: endorser
+wallet-type: indy
+wallet-name: endorser-wallet
+wallet-key: endorserkey
+genesis-url: ledgerUrl/genesis
+seed: 000000000000000000000000Trustee1
